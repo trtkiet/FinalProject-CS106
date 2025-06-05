@@ -69,6 +69,14 @@ def extract_video_features(video_dir, output_path):
                 dtype='float32',
                 compression='gzip'
             )
+
+def read_features(features_path):
+    features = []
+    with h5py.File(features_path, 'r') as h5f:
+        for key in h5f.keys():
+            features.append(h5f[key][:])
+    print(f"Read {len(features)} video features from {features_path}.")
+    return features
     
 def main():
     video_dir = 'input_extractor'
