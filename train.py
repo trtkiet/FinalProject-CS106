@@ -29,4 +29,3 @@ if __name__ == '__main__':
     model.train(features)  # Set the model to training mode
     model_state_dict = model.state_dict()
     torch.save(model_state_dict, args.save_model)
-    

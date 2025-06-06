@@ -10,7 +10,8 @@ class DSN(nn.Module):
         super(DSN, self).__init__()
         self.rnn = nn.LSTM(in_dim, hid_dim, num_layers=num_layers, bidirectional=True, batch_first=True)
         self.fc = nn.Linear(hid_dim*2, 1)
-
+    
+    @torch.no_grad()
     def forward(self, x):
         h, _ = self.rnn(x)
         p = torch.sigmoid(self.fc(h))
