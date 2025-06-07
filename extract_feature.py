@@ -15,7 +15,7 @@ def extract_frames(video_path, fps=2):
     interval = int(round(orig_fps / fps)) if orig_fps > 0 else 15
     frames = []
     frame_idx = 0
-
+    frame_ids = []
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
@@ -24,9 +24,10 @@ def extract_frames(video_path, fps=2):
             img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             img = Image.fromarray(img)
             frames.append(img)
+            frame_ids.append(frame_idx)
         frame_idx += 1
     cap.release()
-    return frames
+    return orig_fps, frames, frame_idx, frame_ids
 
 
 def extract_features(frames):
@@ -48,35 +49,44 @@ def extract_features(frames):
         features.append(output.squeeze().numpy())
     return features
         
-def extract_video_features(video_dir, output_path):
+def extract_video_features(video_dir, output_path, fps=2):
     with h5py.File(output_path, 'w') as h5f:
         for filename in tqdm(os.listdir(video_dir)):
-            if not filename.endswith(('.mp4', '.avi', '.mov', 'webm')):
+            if not filename.endswith(('.mp4', '.avi', '.mov', '.webm')):
                 continue
 
             video_path = os.path.join(video_dir, filename)
             video_name = os.path.splitext(filename)[0]
+            
+            data = {}
 
-            frames = extract_frames(video_path, fps=2)
+            orig_fps, frames, total_frames, frame_ids = extract_frames(video_path, fps=fps)
             if not frames:
                 continue
 
             features = extract_features(frames)  # List of np.arrays
+            
+            data['Features'] = features
+            data['N_FPS_OG'] = [orig_fps]
+            data['N_FPS_EXTRACTED'] = [fps]
+            data['N_FRAMES'] = [total_frames]
+            data['Choosen_Frame_IDs'] = frame_ids
+            
 
-            h5f.create_dataset(
-                name=video_name,
-                data=features,
-                dtype='float32',
-                compression='gzip'
-            )
+            h5f.create_group(video_name)
+            for key, value in data.items():
+                h5f[video_name].create_dataset(key, data=value)
 
-def read_features(features_path):
-    features = []
+def read_datas(features_path):
+    datas = []
     with h5py.File(features_path, 'r') as h5f:
-        for key in h5f.keys():
-            features.append(h5f[key][:])
-    print(f"Read {len(features)} video features from {features_path}.")
-    return features
+        for video_name in h5f.keys():
+            data = {'Video_Name': video_name}
+            for key in h5f[video_name].keys():
+                data[key] = h5f[video_name][key][:]
+            datas.append(data)
+    print(f"Read {len(datas)} video datas from {features_path}.")
+    return datas
     
 def main():
     video_dir = 'input_extractor'

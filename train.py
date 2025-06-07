@@ -1,4 +1,4 @@
-from extract_feature import extract_video_features, read_features
+from extract_feature import extract_video_features, read_datas
 import argparse
 from models import DSN
 import torch 
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     if extract_features:
         extract_video_features(input_dir, output_extractor)
     
-    features = read_features(output_extractor)
+    features = read_datas(output_extractor)['Features']
     model = DSN()
     
     model.train(features)  # Set the model to training mode

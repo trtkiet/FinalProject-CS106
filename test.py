@@ -1,8 +1,11 @@
 import argparse
-from extract_feature import extract_video_features, read_features
+from extract_feature import extract_video_features, read_datas
 import torch
 from models import DSN
 from KTS import Kernel_temporal_segmentation as KTS
+import h5py
+import numpy as np
+from Knapsack import Knapsack
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test script for feature extraction and model testing')
@@ -15,7 +18,7 @@ if __name__ == "__main__":
                         help='Path to save the extracted features')
     parser.add_argument('--pretrained_model', type=str, default='weights/model.pth',
                         help='Path to the pretrained model weights')
-    parser.add_argument('--save_summary', type=str, default='output_extractor/summary.h5',
+    parser.add_argument('--save_summary', type=str, default='summaries/summary.h5',
                         help='Path to save the summary of selected frames')
     
     args = parser.parse_args()
@@ -23,19 +26,51 @@ if __name__ == "__main__":
     if args.extract_features:
         extract_video_features(args.input_dir, args.output_extractor)
         
-    features = read_features(args.output_extractor)
+    datas = read_datas(args.output_extractor)
+    print()
     # Temporal Segmentation using KTS
-    for feature in features:
-        change_points = KTS(feature)
-        continue
-    exit(0)
+    list_change_points = []
+    for data in datas:
+        print(data)
+        list_change_points.append(KTS(data['Features'], max_change_points=20, penalty_factor=0.1))
     
     model = DSN()
-    model.load_state_dict(torch.load(args.pretrained_model))
+    model.load_state_dict(torch.load(args.pretrained_model, weights_only=True))
     
-    features = torch.tensor(features, dtype=torch.float32)
-    frame_importance = model.forward(features)
-    frame_importance = frame_importance.squeeze().cpu().numpy()
-    
-    
-    
+    hd5 = h5py.File(args.save_summary, 'w')
+    for i, data in enumerate(datas):
+        change_points = list_change_points[i]
+        video_name = data['Video_Name']
+        features = np.array(data['Features'])
+        features = torch.tensor(features, dtype=torch.float32)
+        frame_ids = np.array(data['Choosen_Frame_IDs'])
+        n_frames = data['N_FRAMES'][0]
+        
+        importance_scores = model.forward(features)
+        print("Importance scores calculated for all videos.")
+        importance_scores = importance_scores.detach().numpy()
+        
+        last = 0
+        seg_weights = []
+        seg_values = []
+        for cp in change_points:
+            seg_weights.append(cp - last)
+            seg_values.append(np.mean(importance_scores[last:cp]))
+            last = cp
+        
+        _, segments = Knapsack(seg_weights, seg_values, int(features.shape[0] * 0.15))
+        
+        frame_state = np.zeros((n_frames), dtype=bool)
+        for seg_id in segments:
+            if seg_id == 0:
+                start = 0
+            else:
+                start = change_points[seg_id - 1]
+            end = change_points[seg_id] - 1
+            
+            start = frame_ids[start]
+            end = frame_ids[end]
+            frame_state[start:end + 1] = True
+        hd5.create_dataset(f"{video_name}", data=frame_state, compression='gzip')
+    hd5.close()
+        

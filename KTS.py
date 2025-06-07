@@ -22,7 +22,7 @@ def Kernel_temporal_segmentation(features, max_change_points=20, penalty_factor=
     n = features.shape[0]
     
     A = gram_matrix_linear(features)
-    print(A.shape)
+    
     A_cum = np.cumsum(np.cumsum(A, axis=0), axis=1)
     v = np.zeros((n, n+1), dtype=np.float32)
     for t in range(n):
@@ -32,7 +32,7 @@ def Kernel_temporal_segmentation(features, max_change_points=20, penalty_factor=
             
             sum_block = calc_partion(A_cum, t, t, t + d - 1, t + d - 1)
             v[t, t + d] = sum_block - (1.0 / d) * sum_diag
-    print(v)
+    
     L = np.full((max_change_points+1, n+1), np.inf, dtype=np.float32)
     for i in range(max_change_points + 1):
         if i == 0:
@@ -41,23 +41,18 @@ def Kernel_temporal_segmentation(features, max_change_points=20, penalty_factor=
         for j in range(1, n + 1):
             for t in range(i, j):
                 L[i, j] = min(L[i, j], L[i - 1, t] + v[t, j])
-    print(L)
+    
     m = 0
     for i in range(1, max_change_points + 1):
-        print(f"Checking change point {i} with value {L[i, n] + penalty_factor * penalty(i, n)}")
-        print(f"L[{i}, {n}]: {L[i, n]}")
-        print(f"Penalty: {penalty_factor * penalty(i, n)}")
         if L[m, n] + penalty_factor * penalty(m, n) > L[i, n] + penalty_factor * penalty(i, n):
             m = i
-    print(f"Optimal number of change points: {m}")
+
     change_points = []
     current_end = n
     current_m = m
     
     while current_m > 0 and current_end > 0:
-        # Find the best previous position
         best_t = current_m
-        best_cost = np.inf
         
         for t in range(current_m, current_end):
             if L[current_m-1, t] != np.inf and v[t, current_end] != np.inf:
