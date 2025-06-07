@@ -9,9 +9,9 @@ if __name__ == '__main__':
     
     parser.add_argument('-e', '--extract_features', action='store_true',
                         help='Extract features from videos')
-    parser.add_argument('--input_dir', type=str, default='input_extractor',
+    parser.add_argument('-i', '--input_dir', type=str, default='input_folder',
                         help='Directory containing input videos')
-    parser.add_argument('--output_extractor', type=str, default='output_extractor/video_features.h5',
+    parser.add_argument('-o', '--output_extractor', type=str, default='features_folder/video_features.h5',
                         help='Path to save the extracted features')
     parser.add_argument('--save_model', type=str, default='weights/model.pth',
                         help='Path to save the trained model')

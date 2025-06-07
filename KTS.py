@@ -3,6 +3,23 @@ import numpy as np
 def gram_matrix_linear(X):
     return np.dot(X, X.T)
 
+def gram_matrix_rbf(X, sigma=1.0):
+    """
+    Compute the RBF (Gaussian) kernel Gram matrix.
+    
+    Parameters:
+    X : np.ndarray
+        Input data of shape (n_samples, n_features).
+    sigma : float
+        Bandwidth parameter for the RBF kernel.
+        
+    Returns:
+    np.ndarray
+        The RBF kernel Gram matrix of shape (n_samples, n_samples).
+    """
+    sq_dists = np.sum(X**2, axis=1).reshape(-1, 1) + np.sum(X**2, axis=1) - 2 * np.dot(X, X.T)
+    return np.exp(-sq_dists / (2 * sigma**2))
+
 def calc_partion(A, x, y, u, v):
     sum = A[u, v]
     if x > 0:
@@ -21,7 +38,7 @@ def penalty(m, n):
 def Kernel_temporal_segmentation(features, max_change_points=20, penalty_factor=0.01):
     n = features.shape[0]
     
-    A = gram_matrix_linear(features)
+    A = gram_matrix_rbf(features)
     
     A_cum = np.cumsum(np.cumsum(A, axis=0), axis=1)
     v = np.zeros((n, n+1), dtype=np.float32)

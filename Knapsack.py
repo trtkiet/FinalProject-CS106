@@ -22,4 +22,7 @@ def Knapsack(weights, values, capacity):
             np_items.append(i - 1)  # Store the index of the item
             w -= weights[i - 1]  # Reduce the weight by the weight of the chosen item
             
+    #print sum weights 
+    print(f"Total weight of selected items: {sum(weights[i] for i in np_items)}")
+            
     return dp[n][capacity], np_items[::-1]  # Return the maximum value and the items in reverse order
