@@ -7,6 +7,7 @@ import h5py
 import numpy as np
 from Knapsack import Knapsack
 from summary2video import create_summary_video
+import os
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test script for feature extraction and model testing')
@@ -30,15 +31,17 @@ if __name__ == "__main__":
         extract_video_features(args.input_dir, args.output_extractor)
         
     datas = read_datas(args.output_extractor)
-    print()
     # Temporal Segmentation using KTS
     list_change_points = []
     for data in datas:
-        print(data)
-        list_change_points.append(KTS(data['Features'], max_change_points=20, penalty_factor=0.05))
+        list_change_points.append(KTS(data['Features'], max_change_points=len(data['Features'])//2, penalty_factor=0.05))
     
     model = DSN()
     model.load_state_dict(torch.load(args.pretrained_model, weights_only=True))
+    
+    summaries_folder = os.path.dirname(args.save_summary)
+    if not os.path.exists(summaries_folder):
+        os.makedirs(summaries_folder)
     
     hd5 = h5py.File(args.save_summary, 'w')
     for i, data in enumerate(datas):
@@ -47,7 +50,9 @@ if __name__ == "__main__":
         features = np.array(data['Features'])
         features = torch.tensor(features, dtype=torch.float32)
         frame_ids = np.array(data['Choosen_Frame_IDs'])
-        n_frames = data['N_FRAMES'][0]
+        n_frames_original = data['N_FRAMES'][0]
+        
+        
         
         importance_scores = model.forward(features)
         importance_scores = importance_scores.detach().numpy()
@@ -56,25 +61,30 @@ if __name__ == "__main__":
         seg_weights = []
         seg_values = []
         for cp in change_points:
-            seg_weights.append(cp - last)
+            seg_weights.append(frame_ids[cp] - frame_ids[last])
             seg_values.append(np.mean(importance_scores[last:cp]))
             last = cp
         
-        _, segments = Knapsack(seg_weights, seg_values, int(features.shape[0] * 0.15))
-        print(f"Selected segments for {video_name}: {segments}")
+        # print('Original number of frames:', n_frames_original)
+        last = 0
         
-        frame_state = np.zeros((n_frames), dtype=bool)
+        _, segments = Knapsack(seg_weights, seg_values, int(n_frames_original * 0.15))
+        # print(f"Selected segments for {video_name}: {segments}")
+        
+        frame_state = np.zeros((n_frames_original), dtype=bool)
         for seg_id in segments:
             if seg_id == 0:
                 start = 0
             else:
                 start = change_points[seg_id - 1]
-            end = change_points[seg_id] - 1
-            print('Segment:', start, end)
+            end = change_points[seg_id]
+            
             start = frame_ids[start]
-            end = frame_ids[end]
-            print('Selected segment:', start, end)
+            end = frame_ids[end] - 1
+            
             frame_state[start:end + 1] = True
+        print(f"% of frames selected for {video_name}: {np.sum(frame_state) / n_frames_original * 100:.2f}%")
+        print(f"Number of frames selected for {video_name}: {np.sum(frame_state)} / {n_frames_original}")
         hd5.create_dataset(f"{video_name}", data=frame_state, compression='gzip')
     hd5.close()
     

@@ -5,6 +5,8 @@ from tqdm import tqdm
 import os
 
 def create_summary_video(source_video_folder, videos_summaries_path, output_folder):
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
     dict_frame_states = {}
     with h5py.File(videos_summaries_path, 'r') as hf:
         for video_name in hf.keys():
@@ -22,7 +24,6 @@ def create_summary_video(source_video_folder, videos_summaries_path, output_fold
             print(f"Skipping {video_name} as it has no summary data.")
             continue
         frame_state = dict_frame_states[video_name]
-        print(frame_state)
         output_video_path = os.path.join(output_folder, f"{video_name}_summary.mp4")
         # Open the video file
         cap = cv2.VideoCapture(video_path)

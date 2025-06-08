@@ -3,6 +3,7 @@ import argparse
 from models import DSN
 import torch 
 import h5py
+import os
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train the feature extractor')
@@ -22,10 +23,21 @@ if __name__ == '__main__':
     
     if extract_features:
         extract_video_features(input_dir, output_extractor)
+        
+    if os.path.exists(args.save_model):
+        print(f"Model already exists at {args.save_model}. Skipping training.")
+        exit(0)
+        
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    datas = read_datas(output_extractor)
+    features = []
+    for data in datas:
+        features.append(data['Features'])
+    model = DSN().to(device)
     
-    features = read_datas(output_extractor)['Features']
-    model = DSN()
-    
-    model.train(features)  # Set the model to training mode
+    model.train(features, device='cuda')  # Set the model to training mode
+    output_folder = os.path.dirname(args.save_model)
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
     model_state_dict = model.state_dict()
     torch.save(model_state_dict, args.save_model)

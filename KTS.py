@@ -38,7 +38,7 @@ def penalty(m, n):
 def Kernel_temporal_segmentation(features, max_change_points=20, penalty_factor=0.01):
     n = features.shape[0]
     
-    A = gram_matrix_rbf(features)
+    A = gram_matrix_linear(features)
     
     A_cum = np.cumsum(np.cumsum(A, axis=0), axis=1)
     v = np.zeros((n, n+1), dtype=np.float32)
@@ -84,6 +84,4 @@ def Kernel_temporal_segmentation(features, max_change_points=20, penalty_factor=
     
     # Reverse to get chronological order and convert to 0-based indexing
     change_points.reverse()
-    change_points.append(n)  # Append the end of the sequence as a change point
-    print(f"Change points found: {change_points}")
     return np.array(change_points, dtype=int)

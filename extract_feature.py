@@ -50,6 +50,12 @@ def extract_features(frames):
     return features
         
 def extract_video_features(video_dir, output_path, fps=2):
+    output_folder = os.path.dirname(output_path)
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    if os.path.exists(output_path):
+        print(f"Output file {output_path} already exists. Skipping.")
+        return
     with h5py.File(output_path, 'w') as h5f:
         for filename in tqdm(os.listdir(video_dir)):
             if not filename.endswith(('.mp4', '.avi', '.mov', '.webm')):
