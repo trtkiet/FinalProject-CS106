@@ -18,7 +18,7 @@ class DSN(nn.Module):
         return p
     
     def train(self, videos_features, epochs=60, early_stopping=10, alpha=20, epsilon=0.5, episodes=5, 
-              lr=1e-4, beta=0.01, weight_decay=1e-5, device='cpu', batch_size=4):
+              lr=1e-4, beta=0.01, weight_decay=1e-5, device='cpu', batch_size=1):
         optimizer = torch.optim.Adam(self.parameters(), lr=lr, weight_decay=weight_decay)
         
         print("Training model...")
@@ -81,6 +81,6 @@ class DSN(nn.Module):
                 print(f"Epoch {epoch+1}/{epochs}, Reward: {epoch_reward:.4f}")
             
             # Early stopping
-            if epoch > early_stopping and epoch_reward - min(epoch_rewards[-early_stopping:]) < 1e-5:
+            if epoch > early_stopping and max(epoch_rewards[-early_stopping:]) - min(epoch_rewards[-early_stopping:]) < 1e-5:
                 print(f"Early stopping at epoch {epoch+1}")
                 break

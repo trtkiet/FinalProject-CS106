@@ -9,7 +9,7 @@ def Knapsack(weights, values, capacity):
         for w in range(capacity + 1):
             if weights[i - 1] <= w:
                 # dp[i][w] = max(dp[i - 1][w], dp[i - 1][w - weights[i - 1]] + values[i - 1])
-                if dp[i - 1][w] <= dp[i - 1][w - weights[i - 1]] + values[i - 1]:
+                if dp[i - 1][w] < dp[i - 1][w - weights[i - 1]] + values[i - 1]:
                     dp[i][w] = dp[i - 1][w - weights[i - 1]] + values[i - 1]
                     choose[i][w] = True
             else:

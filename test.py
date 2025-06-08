@@ -8,6 +8,9 @@ import numpy as np
 from Knapsack import Knapsack
 from summary2video import create_summary_video
 import os
+from evaluate import evaluate_summary
+import scipy 
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test script for feature extraction and model testing')
@@ -24,6 +27,10 @@ if __name__ == "__main__":
                         help='Path to save the summary of selected frames')
     parser.add_argument('-v', '--save_video', type=str, default='output_videos',
                         help='Directory to save the summary videos')
+    parser.add_argument('--user_summary', type=str, default=None,
+                        help='Path to user-provided summary for evaluation (optional)')
+    parser.add_argument('--save_results', type=str, default='results',
+                        help='Directory to save evaluation results')
     
     args = parser.parse_args()
     
@@ -90,3 +97,42 @@ if __name__ == "__main__":
     
     create_summary_video(args.input_dir, args.save_summary, args.save_video)
     print("Summary videos created successfully.")
+    
+    summaries = {}
+    with h5py.File(args.save_summary, 'r') as hf:
+        for video_name in hf.keys():
+            summaries[video_name] = hf[video_name][:]
+    print(f"Summaries extracted for {len(summaries)} videos.")
+    
+    # Read user-provided summary
+    f_scores = []
+    precisions = []
+    recalls = []
+    if args.user_summary is None:
+        print("No user summary provided for evaluation. Skipping evaluation.")
+        exit(0)
+    for filename in summaries.keys():
+        path_to_user_summary = os.path.join(args.user_summary, f"{filename}.mat")
+        if not os.path.exists(path_to_user_summary):
+            print(f"User summary for {filename} not found. Skipping evaluation.")
+            continue
+        data = scipy.io.loadmat(path_to_user_summary)
+        user_score = data.get('user_score').T
+        f_score, precision, recall = evaluate_summary(summaries[filename], user_score)
+        f_scores.append(f_score)
+        precisions.append(precision)
+        recalls.append(recall)
+    print(f"Average F-score: {np.mean(f_scores):.3f}")
+    print(f"Average Precision: {np.mean(precisions):.3f}")
+    print(f"Average Recall: {np.mean(recalls):.3f}")
+    print("Evaluation completed.")
+    
+    save_results_folder = os.path.dirname(args.save_results)
+    if not os.path.exists(save_results_folder):
+        os.makedirs(save_results_folder)
+    
+    with open(args.save_results, 'w') as f:
+        f.write(f"Average F-score: {np.mean(f_scores):.3f}\n")
+        f.write(f"Average Precision: {np.mean(precisions):.3f}\n")
+        f.write(f"Average Recall: {np.mean(recalls):.3f}\n")
+        
